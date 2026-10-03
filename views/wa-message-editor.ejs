@@ -1,0 +1,14 @@
+<div class="full-width wa-message-editor">
+ <label>Template pesan
+  <select class="wa-template-select" aria-label="Template pesan">
+   <option value="">Tulis pesan sendiri / pilih template</option>
+   <option value="layanan" data-message="Halo {nama}, saya ingin mengetahui layanan pemeriksaan laboratorium yang tersedia. Mohon informasinya. Terima kasih.">Informasi layanan</option>
+   <option value="harga" data-message="Halo {nama}, saya ingin menanyakan harga dan paket pemeriksaan laboratorium. Mohon kirimkan informasi atau daftar harganya. Terima kasih.">Harga & paket pemeriksaan</option>
+   <option value="reservasi" data-message="Halo {nama}, saya ingin membuat janji pemeriksaan laboratorium. Mohon informasi jadwal dan cara reservasinya. Terima kasih.">Reservasi pemeriksaan</option>
+   <option value="persiapan" data-message="Halo {nama}, saya ingin mengetahui persiapan sebelum pemeriksaan laboratorium. Apakah perlu puasa atau ada ketentuan lainnya? Terima kasih.">Persiapan pemeriksaan</option>
+   <option value="kartu" data-message="Halo {nama}, saya mendapat kartu nama Anda dan ingin bertanya tentang layanan laboratorium. Mohon informasinya. Terima kasih.">Dari kartu nama marketing</option>
+  </select>
+  <small>Pilih untuk mengisi pesan. Nama kontak akan disesuaikan otomatis.</small>
+ </label>
+ <label class="mt-3"><%= label %><textarea name="<%= field %>" required maxlength="1000" rows="3"><%= value || '' %></textarea><small>Pesan tetap bisa diedit. Klik Simpan untuk menerapkannya pada WhatsApp.</small></label>
+</div>

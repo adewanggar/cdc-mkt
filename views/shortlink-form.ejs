@@ -1,0 +1,6 @@
+<form action="/admin/shortlinks" method="post" class="form-grid"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= row.id || '' %>">
+<label>Nama link<input name="title" value="<%= row.title || '' %>" required maxlength="150" placeholder="Contoh: Promo pemeriksaan Oktober"></label>
+<label>Nama singkat<input name="slug" value="<%= row.slug || '' %>" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="promo" <%= row.id ? 'readonly':'' %>><small><%= row.id ? 'Alamat singkat tetap sama saat link tujuan diubah.' : 'Opsional. Kosongkan untuk membuat kode otomatis.' %></small></label>
+<label class="full-width">Link tujuan (HTTPS)<textarea name="target_url" required maxlength="2048" rows="3" placeholder="https://..."><%= row.target_url || '' %></textarea></label>
+<label class="checkbox-label"><input type="checkbox" name="is_active" value="1" <%= row.is_active ? 'checked':'' %>> Shortlink aktif</label>
+<div class="form-actions full-width"><button class="button primary"><%- include('icon',{name:row.id ? 'check':'plus'}) %> <%= row.id ? 'Simpan perubahan':'Buat shortlink' %></button></div></form>

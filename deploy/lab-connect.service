@@ -1,0 +1,21 @@
+[Unit]
+Description=Lab Connect
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=labconnect
+Group=labconnect
+WorkingDirectory=/var/www/lab-connect
+EnvironmentFile=/var/www/lab-connect/.env
+ExecStart=/usr/bin/node /var/www/lab-connect/src/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/lab-connect/public/uploads
+
+[Install]
+WantedBy=multi-user.target

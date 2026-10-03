@@ -1,0 +1,9 @@
+<section class="panel"><div class="panel-title"><h2>Buat shortlink baru</h2><p class="muted">Tempel link panjang, lalu tentukan nama singkat atau gunakan kode otomatis.</p></div><div class="panel-body"><%- include('shortlink-form',{row:{is_active:1}}) %></div></section>
+<div class="list-toolbar"><strong><%= shortlinks.length %> shortlink</strong><span class="muted">Klik baris untuk mengubah tujuan atau status</span></div>
+<div class="records"><% shortlinks.forEach(row=>{ const url=origin+'/s/'+row.slug; %>
+<details class="panel record"><summary><div class="record-identity"><span class="record-icon"><%- include('icon',{name:'website'}) %></span><div><strong><%= row.title %></strong><small>/s/<%= row.slug %> · <%= row.click_count %> klik</small></div></div><span class="pill <%= row.is_active ? 'green':'gray' %>"><%= row.is_active ? 'Aktif':'Nonaktif' %></span></summary>
+<div class="panel-body"><p class="shortlink-address"><a href="<%= url %>" target="_blank" rel="noopener nofollow"><%= url %></a></p><div class="record-tools"><button class="button secondary small" type="button" data-copy="<%= url %>"><%- include('icon',{name:'website'}) %> Salin shortlink</button><a class="button secondary small" href="<%= url %>" target="_blank" rel="noopener nofollow">Buka <%- include('icon',{name:'arrow'}) %></a></div>
+<%- include('shortlink-form',{row}) %>
+<form action="/admin/shortlinks/<%= row.id %>/remove" method="post" data-confirm="Hapus shortlink ini? Alamat singkat yang sudah dibagikan akan berhenti berfungsi."><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="danger-link">Hapus shortlink</button></form></div></details>
+<% }); %></div>
+<% if(!shortlinks.length) { %><div class="panel empty-state"><h2>Belum ada shortlink</h2><p>Buat shortlink pertama melalui formulir di atas.</p></div><% } %>

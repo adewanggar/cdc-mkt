@@ -1,0 +1,9 @@
+<section class="panel"><div class="panel-title"><h2>Tambah admin baru</h2><p class="muted">Admin baru dapat mengelola seluruh data lab dan menambahkan admin lainnya.</p></div>
+<form action="/admin/users" method="post" class="panel-body form-grid"><input type="hidden" name="_csrf" value="<%= csrf %>">
+<label>Nama admin<input name="name" required maxlength="100" autocomplete="name"></label>
+<label>Email<input type="email" name="email" required maxlength="190" autocomplete="username"></label>
+<label>Password<input type="password" name="password" required minlength="12" maxlength="72" autocomplete="new-password"><small class="muted">Minimal 12 karakter.</small></label>
+<label>Ulangi password<input type="password" name="confirm_password" required minlength="12" maxlength="72" autocomplete="new-password"></label>
+<div class="form-actions full-width"><button class="button primary"><%- include('icon',{name:'plus'}) %> Tambah admin</button></div></form></section>
+<div class="list-toolbar"><strong><%= admins.length %> akun admin</strong></div>
+<div class="records"><% admins.forEach(admin=>{ %><section class="panel"><div class="panel-body record-identity"><span class="record-icon"><%- include('icon',{name:'shield'}) %></span><div><strong><%= admin.name %></strong><small><%= admin.email %></small></div><% if(admin.id===user.id) { %><span class="pill green">Akun Anda</span><% } %></div></section><% }); %></div>
