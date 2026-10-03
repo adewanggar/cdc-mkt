@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual, randomInt } from 'node:crypto';
 export function invalid(message) { return Object.assign(new Error(message), { status: 400 }); }
 export function passwordInput(value) {
  if(typeof value!=='string' || !value.length || Buffer.byteLength(value)>72 || value.includes('\0')) throw invalid('Password harus diisi dan maksimal 72 byte.');
@@ -40,6 +40,15 @@ export function slug(value) {
  const result = text(value, 'Slug', 80);
  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(result) || result === 'default') throw invalid('Slug harus huruf kecil, angka, atau tanda hubung; "default" dicadangkan.');
  return result;
+}
+export function shortlinkCode(value) {
+ const result=text(value,'Nama singkat',80);
+ if(!/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/.test(result)) throw invalid('Nama singkat hanya boleh berisi huruf besar/kecil, angka, atau tanda hubung.');
+ return result;
+}
+export function randomShortlinkCode() {
+ const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+ return Array.from({length:8},()=>alphabet[randomInt(alphabet.length)]).join('');
 }
 export function color(value) {
  if (!/^#[0-9a-fA-F]{6}$/.test(value || '')) throw invalid('Warna harus berupa hex 6 digit.');

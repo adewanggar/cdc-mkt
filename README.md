@@ -180,9 +180,11 @@ Pemeriksaan khusus penambahan admin dapat dijalankan pada database QA terpisah: 
 
 ## Shortlink
 
-Menu **Shortlink** terpisah dari kontak marketing. Isi nama link dan URL tujuan HTTPS; nama singkat opsional (huruf kecil, angka, tanda hubung). Nama kosong menghasilkan kode acak otomatis. Contoh alamat final: `https://mkt.cmhgroup.id/s/promo`, sesuai APP_URL. Klik baris untuk mengubah tujuan, aktif/nonaktif, menyalin alamat, membuka, atau menghapus shortlink. Nama singkat yang sudah dibuat tidak berubah saat tujuan diedit. Pembuatan/pengelolaan hanya tersedia bagi admin yang login dan dilindungi CSRF.
+Menu **Shortlink** terpisah dari kontak marketing. Isi nama link dan URL tujuan HTTPS; nama singkat opsional (huruf besar, huruf kecil, angka, tanda hubung). Huruf besar/kecil dibedakan: `Promo` dan `promo` adalah dua alamat berbeda. Nama kosong menghasilkan kode acak Base62 delapan karakter, contoh `aB7xK2mQ`. Contoh alamat final: `https://mkt.cmhgroup.id/s/promo`, sesuai APP_URL. Klik baris untuk mengubah tujuan, aktif/nonaktif, menyalin alamat, membuka, atau menghapus shortlink. Nama singkat yang sudah dibuat tidak berubah saat tujuan diedit. Pembuatan/pengelolaan hanya tersedia bagi admin yang login dan dilindungi CSRF.
 
 Shortlink aktif menggunakan redirect 302 tanpa cache. Shortlink nonaktif/dihapus mengembalikan 404. Penghitung adalah total permintaan GET, termasuk bot, pratinjau, dan kunjungan berulang; HEAD tidak dihitung. Penghitung terpisah dari statistik marketing. Tujuan tidak diambil dari parameter pengunjung. Tidak ada pengambilan konten URL tujuan oleh server.
 
 Instalasi baru menggunakan schema.sql. Untuk instalasi lama, backup lalu jalankan `npm run db:migrate` sebelum restart aplikasi; migrasi menambah tabel short_links tanpa menghapus data dan aman dijalankan ulang. Jangan menjalankan db:init ulang.
 Pengujian shortlink pada database QA terpisah: `node --env-file=.env.test tests/shortlinks.integration.js`. Skrip memakai akun admin dari environment dan membersihkan hanya shortlink/sesi sementara yang dibuatnya.
+
+Pembaruan Base62: pada instalasi lama, jalankan `npm run db:migrate` sebelum restart. Migrasi mengubah kolom nama singkat menjadi peka huruf besar/kecil tanpa mengganti kode, tujuan, atau jumlah klik yang sudah tersimpan. Pengaturan slug kontak marketing tetap memakai huruf kecil.

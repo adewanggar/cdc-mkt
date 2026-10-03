@@ -53,7 +53,16 @@ try {
  await post('/admin/shortlinks',{...changed,is_active:''});ok((await request('/s/'+code)).status===404);
  await post('/admin/shortlinks',changed);ok((await request('/s/'+code,{method:'HEAD'})).status===302);
  await post('/admin/shortlinks',{...data,slug:'',title:'Auto '+marker});
- const [auto]=await query('SELECT * FROM short_links WHERE title=?',['Auto '+marker]);created.add(auto.id);ok(/^[a-f0-9]{8}$/.test(auto.slug));
+ const [auto]=await query('SELECT * FROM short_links WHERE title=?',['Auto '+marker]);created.add(auto.id);ok(/^[A-Za-z0-9]{8}$/.test(auto.slug));
+ ok((await request('/s/'+auto.slug,{method:'HEAD'})).headers.get('location')===data.target_url);
+ const upperCode='Qa'+marker.replaceAll('-','').slice(0,12),lowerCode=upperCode.toLowerCase();
+ for(const [alias,destination] of [[upperCode,'https://example.com/upper'],[lowerCode,'https://example.com/lower']]) {
+  await post('/admin/shortlinks',{...data,slug:alias,target_url:destination});
+  const [caseRow]=await query('SELECT id FROM short_links WHERE slug=?',[alias]);created.add(caseRow.id);
+  ok((await request('/s/'+alias,{method:'HEAD'})).headers.get('location')===destination);
+ }
+ ok((await request('/s/'+upperCode.toUpperCase(),{method:'HEAD'})).status===404);
+ await post('/admin/shortlinks',{...data,slug:upperCode},400);
  ok((await request('/s/not-found-'+marker)).status===404);
  await post('/admin/shortlinks/'+row.id+'/remove',{_csrf:'bad'},403);ok((await request('/s/'+code,{method:'HEAD'})).status===302);
  await post('/admin/shortlinks/'+row.id+'/remove',{});ok((await request('/s/'+code)).status===404);

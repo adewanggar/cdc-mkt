@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unlink } from 'node:fs/promises';
 import { pool, query, dbOptions } from './db.js';
-import { invalid,text,passwordInput,normalizeWA,safeURL,id,slug,color,ink,parseHours,dayNames,openingStatus,device,ipHash,csrfEqual,csvCell,referrer } from './helpers.js';
+import { invalid,text,passwordInput,normalizeWA,safeURL,id,slug,shortlinkCode,randomShortlinkCode,color,ink,parseHours,dayNames,openingStatus,device,ipHash,csrfEqual,csvCell,referrer } from './helpers.js';
 
 const root = fileURLToPath(new URL('../',import.meta.url));
 const production = process.env.NODE_ENV === 'production';
@@ -56,7 +56,7 @@ async function resolveContact(routeSlug) {
 app.get('/healthz',async(req,res)=> { await query('SELECT 1'); res.json({status:'ok'}); });
 app.get('/s/:code',async(req,res)=> {
  const code=req.params.code;
- if(code.length>80 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(code)) throw Object.assign(new Error('Shortlink tidak ditemukan.'),{status:404});
+ if(code.length>80 || !/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/.test(code)) throw Object.assign(new Error('Shortlink tidak ditemukan.'),{status:404});
  const [link]=await query('SELECT id,target_url FROM short_links WHERE slug=? AND is_active=1',[code]);
  if(!link) throw Object.assign(new Error('Shortlink tidak ditemukan atau sudah nonaktif.'),{status:404});
  const destination=safeURL(link.target_url);
@@ -287,7 +287,7 @@ app.post('/admin/shortlinks',csrf,async(req,res)=> {
  } else {
   const custom=text(b.slug,'Nama singkat',80,false);
   for(let attempt=0;attempt<3;attempt++) {
-   const code=custom ? slug(custom):randomBytes(4).toString('hex');
+   const code=custom ? shortlinkCode(custom):randomShortlinkCode();
    try { await query('INSERT INTO short_links (title,slug,target_url,is_active) VALUES (?,?,?,?)',[title,code,url,active]); break; }
    catch(err) {
     if(err.code==='ER_DUP_ENTRY' && custom) throw invalid('Nama singkat sudah digunakan. Pilih nama lain.');

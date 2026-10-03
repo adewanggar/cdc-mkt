@@ -65,3 +65,7 @@ Pilihan Tampilkan nama lab di bawah logo telah diuji melalui panel admin: simpan
 ## Shortlink terpisah
 
 42 pemeriksaan integrasi khusus berhasil: akses pengelolaan tanpa login ditolak; CSRF create/delete; validasi nama, slug, dan URL HTTPS; nama singkat duplikat ditolak; kode otomatis; redirect tujuan beserta query/fragment; parameter pengunjung tidak dapat mengganti tujuan; HEAD tidak menambah klik; enam GET (termasuk lima bersamaan) tercatat tepat enam; pengubahan tujuan mempertahankan alias; nonaktif/aktif kembali; hapus; 404 untuk kode tidak dikenal; dan escaping nama pada daftar. Pengujian membersihkan hanya shortlink/sesi QA sendiri, tanpa menghapus kontak, statistik marketing, akun, atau pengaturan pengguna. Migrasi dijalankan dua kali tanpa kesalahan. Menu diperiksa di desktop dan ponsel; halaman ponsel tidak meluber secara horizontal.
+
+## Shortlink Base62 dengan huruf besar/kecil
+
+Lima unit test dan 49 pemeriksaan integrasi shortlink lulus. Cakupan baru: kode otomatis delapan karakter A–Z/a–z/0–9; alias campuran; dua alias yang hanya berbeda besar/kecil tersimpan sebagai dua baris dan redirect ke dua tujuan berbeda; varian case yang tidak dibuat mengembalikan 404; duplikat dengan case sama tetap ditolak. Alias lama yang berisi huruf kecil, angka, dan tanda hubung tetap diuji berhasil. Migrasi idempotent dijalankan dua kali dan mempertahankan data pengguna.

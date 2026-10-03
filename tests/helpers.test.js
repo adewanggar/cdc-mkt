@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeWA,safeURL,slug,parseHours,openingStatus,ipHash,device,csvCell,csrfEqual,passwordInput} from '../src/helpers.js';
+import {normalizeWA,safeURL,slug,shortlinkCode,randomShortlinkCode,parseHours,openingStatus,ipHash,device,csvCell,csrfEqual,passwordInput} from '../src/helpers.js';
 test('WhatsApp handles Indonesian and international numbers; rejects malformed input',()=>{
  assert.equal(normalizeWA('0812-3456 7890'),'6281234567890');assert.equal(normalizeWA('+62 81234567890'),'6281234567890');assert.equal(normalizeWA('006281234567890'),'6281234567890');
  for(const s of ['abc08123456789','123','0000','080123456789012345678']) assert.throws(()=>normalizeWA(s));
@@ -10,6 +10,12 @@ test('URL and slug validation prevents script URLs and untrusted Maps destinatio
  for(const u of ['javascript:alert(1)','http://example.com','https://user:password@example.com','https://evil.test/google.com']) assert.throws(()=>safeURL(u,'maps'));
  assert.equal(safeURL('tel:+62215550123','phone'),'tel:+62215550123');assert.throws(()=>safeURL('tel:abc','phone'));
  assert.equal(slug('budi-santoso'),'budi-santoso');for(const s of ['default','../admin','Budi',"budi' OR 1=1"]) assert.throws(()=>slug(s));
+});
+test('Shortlink codes preserve case and generate eight Base62 characters',()=>{
+ assert.equal(shortlinkCode('PromoLab7'),'PromoLab7');assert.equal(shortlinkCode('promo-lab'),'promo-lab');
+ assert.notEqual(shortlinkCode('Promo'),shortlinkCode('promo'));
+ for(const code of ['',undefined,'a'.repeat(81),'../admin','promo lab','é','promo--lab','promo_lab']) assert.throws(()=>shortlinkCode(code));
+ for(let i=0;i<32;i++) assert.match(randomShortlinkCode(),/^[A-Za-z0-9]{8}$/);
 });
 test('WIB hours include overnight shifts and closed days',()=>{
  const h={1:{open:'22:00',close:'02:00'},2:null};
