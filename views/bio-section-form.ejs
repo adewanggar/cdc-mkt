@@ -1,0 +1,4 @@
+<form action="/admin/biosections/save" method="post" class="form-grid"><input type="hidden" name="_csrf" value="<%= csrf %>"><input type="hidden" name="id" value="<%= row.id || '' %>">
+<label class="full-width">Judul section<input name="title" value="<%= row.title || '' %>" maxlength="150" required placeholder="Contoh: Kontak Cahaya Lab"></label>
+<label>Urutan section<input type="number" name="sort_order" min="0" max="999" value="<%= row.sort_order || 0 %>" required></label><label class="checkbox-label"><input type="checkbox" name="is_active" value="1" <%= row.is_active ? 'checked':'' %>> Tampilkan section dan tombolnya</label>
+<div class="form-actions full-width"><button class="button primary"><%- include('icon',{name:row.id ? 'check':'plus'}) %> <%= row.id ? 'Simpan section':'Tambah section' %></button></div></form>

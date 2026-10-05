@@ -48,8 +48,12 @@ app.get('/bio/theme.css',async(req,res)=> {
 app.get('/bio',async(req,res)=> {
  const bio=await bioSettings();
  if(!bio.is_active) return res.status(404).render('error',{message:'Halaman Bio Instagram sedang nonaktif.'});
- const links=await query('SELECT * FROM bio_links WHERE is_active=1 ORDER BY sort_order,id');
- res.set('Cache-Control','no-store').render('bio-public',{bio,links,canonical:new URL('/bio',origin).href});
+ const [links,bioSections]=await Promise.all([
+  query('SELECT l.* FROM bio_links l LEFT JOIN bio_sections s ON s.id=l.section_id WHERE l.is_active=1 AND (l.section_id IS NULL OR s.is_active=1) ORDER BY l.sort_order,l.id'),
+  query('SELECT * FROM bio_sections WHERE is_active=1 ORDER BY sort_order,id')
+ ]);
+ const groups=[{id:null,title:''},...bioSections].map(section=>({...section,links:links.filter(link=>link.section_id===section.id)})).filter(section=>section.links.length);
+ res.set('Cache-Control','no-store').render('bio-public',{bio,links,groups,canonical:new URL('/bio',origin).href});
 });
 async function resolveContact(routeSlug) {
  const s=await settings(); let c;
@@ -211,8 +215,8 @@ app.get('/admin/:section',async(req,res)=> {
  const section=req.params.section;
  if(!sections[section]) return res.status(404).render('error',{message:'Halaman tidak ditemukan.'});
  const [s,contacts,branches,buttons,admins,shortlinks]=await Promise.all([settings(),query('SELECT c.*,b.name branch_name FROM contacts c LEFT JOIN branches b ON b.id=c.branch_id ORDER BY c.id'),query('SELECT * FROM branches ORDER BY id'),query('SELECT * FROM extra_buttons ORDER BY sort_order,id'),section==='users' ? query('SELECT id,name,email FROM users ORDER BY id'):[],section==='shortlinks' ? query('SELECT * FROM short_links ORDER BY id DESC'):[]]);
- const [bio,bioLinks]=section==='bio' ? await Promise.all([bioSettings(),query('SELECT * FROM bio_links ORDER BY sort_order,id')]):[null,[]];
- res.render('admin',{section,title:sections[section],s,contacts,branches,buttons,admins,shortlinks,bio,bioLinks,dayNames,origin:origin.origin,stats:null});
+ const [bio,bioLinks,bioSections]=section==='bio' ? await Promise.all([bioSettings(),query('SELECT * FROM bio_links ORDER BY sort_order,id'),query('SELECT * FROM bio_sections ORDER BY sort_order,id')]):[null,[],[]];
+ res.render('admin',{section,title:sections[section],s,contacts,branches,buttons,admins,shortlinks,bio,bioLinks,bioSections,dayNames,origin:origin.origin,stats:null});
 });
 async function activeRelation(table,value) {
  const relationId=id(value,true);
@@ -236,10 +240,16 @@ app.post('/admin/bio',csrf,async(req,res)=> {
  done(req,res,'/admin/bio','Pengaturan Bio Instagram berhasil disimpan.');
 });
 const models={
- biolinks:{table:'bio_links',redirect:'/admin/bio',fields:['title','subtitle','url','icon','sort_order','is_active'],values:async b=> {
+ biosections:{table:'bio_sections',redirect:'/admin/bio',fields:['title','sort_order','is_active'],values:async b=> {
+  const order=Number(b.sort_order);if(!Number.isInteger(order) || order<0 || order>999) throw invalid('Urutan harus 0–999.');
+  return [text(b.title,'Judul section',150),order,b.is_active==='1' ? 1:0];
+ }},
+ biolinks:{table:'bio_links',redirect:'/admin/bio',fields:['title','subtitle','url','icon','sort_order','is_active','section_id'],values:async b=> {
   if(!['website','whatsapp','maps','instagram','catalog','phone'].includes(b.icon)) throw invalid('Jenis tombol tidak valid.');
   const order=Number(b.sort_order);if(!Number.isInteger(order) || order<0 || order>999) throw invalid('Urutan harus 0–999.');
-  return [text(b.title,'Judul tombol',150),text(b.subtitle,'Keterangan tombol',200,false),safeURL(b.url,b.icon),b.icon,order,b.is_active==='1' ? 1:0];
+  const sectionId=id(b.section_id,true);
+  if(sectionId && !(await query('SELECT id FROM bio_sections WHERE id=?',[sectionId])).length) throw invalid('Section tidak ditemukan.');
+  return [text(b.title,'Judul tombol',150),text(b.subtitle,'Keterangan tombol',200,false),safeURL(b.url,b.icon),b.icon,order,b.is_active==='1' ? 1:0,sectionId];
  }},
  contacts:{ fields:['slug','name','job_title','wa_number','wa_message','branch_id','is_active'],
   values:async b=>[slug(b.slug),text(b.name,'Nama',100),text(b.job_title,'Jabatan',100),normalizeWA(b.wa_number),text(b.wa_message,'Pesan',1000),await activeRelation('branches',b.branch_id),b.is_active ? 1:0] },

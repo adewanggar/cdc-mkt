@@ -198,3 +198,9 @@ Halaman memakai tabel `bio_settings` dan `bio_links`, tidak memakai kontak marke
 Instalasi baru memakai schema.sql dan seed.sql terbaru. Pembaruan instalasi lama: backup database/gambar, upload kode, jalankan `npm run db:migrate`, lalu restart aplikasi. Untuk Docker: `docker compose build app`, `docker compose run --rm app npm run db:migrate`, lalu `docker compose up -d app`. Migrasi membuat tabel baru tanpa menghapus data, dan dapat diulang.
 
 Tes khusus pada database QA terpisah: `node --env-file=.env.test tests/bio.integration.js`. Pengujian memakai akun/tombol/kontak sementara sendiri, mengembalikan pengaturan bio, dan mempertahankan pengaturan/statistik marketing.
+
+### Section Bio Instagram
+
+Di menu Bio Instagram, buat section dengan judul sendiri (contoh: Kontak Cahaya Lab, Lokasi Cahaya Lab, Update & Info), tentukan urutan, lalu pilih section pada formulir setiap tombol. Judul kelompok tampil rata tengah dengan jarak antarsection. Urutan section dan urutan tombol dalam section diatur terpisah; angka kecil tampil lebih dulu. Tombol tanpa section tampil paling atas tanpa judul kelompok. Section kosong atau tanpa tombol aktif tidak ditampilkan.
+
+Menonaktifkan section menyembunyikan judul dan seluruh tombolnya tanpa mengubah status tombol. Menghapus section mempertahankan tombol dan memindahkannya ke Tanpa section. Section dimulai kosong untuk diisi admin. Tombol lama tetap tersimpan tanpa section. Pembaruan VPS membutuhkan `npm run db:migrate` sebelum restart; migrasi menambah tabel `bio_sections` dan kolom `bio_links.section_id` tanpa menghapus isi bio.

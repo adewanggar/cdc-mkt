@@ -13,7 +13,7 @@ const base=`http://127.0.0.1:${server.address().port}`,marker=randomUUID(),email
 const [original]=await query('SELECT * FROM bio_settings WHERE id=1');
 const [marketing]=await query('SELECT * FROM site_settings WHERE id=1');
 const [counts]=await query('SELECT (SELECT COUNT(*) FROM visits) visits,(SELECT COUNT(*) FROM clicks) clicks');
-let cookie='',csrf='',adminId,contactId,checks=0;const links=new Set(),sessions=new Set();
+let cookie='',csrf='',adminId,contactId,checks=0;const links=new Set(),sections=new Set(),sessions=new Set();
 const profile={title:'Bio QA '+marker,description:'<Deskripsi tersendiri>',primary_color:'#123456',accent_color:'#fedcba',show_title:'1',is_active:'1'};
 function ok(value){assert.ok(value);checks++;}
 async function request(route,options={}) {
@@ -38,6 +38,39 @@ try {
  }
  html=await page('/bio');ok(html.indexOf(button.title)<html.indexOf('Last '+marker));ok(!html.includes('Hidden '+marker));ok(html.includes('&lt;Keterangan&gt;'));ok(html.includes('href="https://example.com/promo?a=1&amp;b=2"'));
  const [first]=await query('SELECT id FROM bio_links WHERE title=?',[button.title]);
+ const section={title:'<Kontak> '+marker,sort_order:'20',is_active:'1'};
+ await post('/admin/biosections/save',{...section,_csrf:'bad'},403);
+ await post('/admin/biosections/save',{...section,title:''},400);
+ await post('/admin/biosections/save',{...section,sort_order:'-1'},400);
+ for(const [title,sort_order] of [[section.title,'20'],['Lokasi '+marker,'10'],['Empty '+marker,'0']]) {
+  await post('/admin/biosections/save',{...section,title,sort_order});
+  const [row]=await query('SELECT id FROM bio_sections WHERE title=?',[title]);sections.add(row.id);
+ }
+ const [contactSection]=await query('SELECT id FROM bio_sections WHERE title=?',[section.title]);
+ const [locationSection]=await query('SELECT id FROM bio_sections WHERE title=?',['Lokasi '+marker]);
+ await post('/admin/biolinks/save',{...button,id:String(first.id),section_id:'-1'},400);
+ await post('/admin/biolinks/save',{...button,id:String(first.id),section_id:'9007199254740991'},400);
+ await post('/admin/biolinks/save',{...button,id:String(first.id),section_id:String(contactSection.id)});
+ const locationButton={...button,title:'Maps '+marker,section_id:String(locationSection.id),sort_order:'999'};
+ await post('/admin/biolinks/save',locationButton);const [locationLink]=await query('SELECT id FROM bio_links WHERE title=?',[locationButton.title]);links.add(locationLink.id);
+ const secondButton={...button,title:'Second '+marker,section_id:String(contactSection.id),sort_order:'2'};
+ await post('/admin/biolinks/save',secondButton);const [secondLink]=await query('SELECT id FROM bio_links WHERE title=?',[secondButton.title]);links.add(secondLink.id);
+ html=await page('/admin/bio');ok(html.includes('&lt;Kontak&gt; '+marker));ok(html.includes('name="section_id"'));ok(html.includes(`value="${contactSection.id}" selected`));
+ html=await page('/bio');
+ ok(html.indexOf('Last '+marker)<html.indexOf('Lokasi '+marker));
+ ok(html.indexOf(locationButton.title)<html.indexOf('&lt;Kontak&gt; '+marker));
+ ok(html.indexOf(button.title)<html.indexOf(secondButton.title));
+ ok(!html.includes('Empty '+marker));
+ await post('/admin/biosections/save',{...section,id:String(contactSection.id),is_active:''});
+ html=await page('/bio');ok(!html.includes('&lt;Kontak&gt; '+marker) && !html.includes(button.title) && !html.includes(secondButton.title));ok(html.includes(locationButton.title));
+ await post('/admin/biosections/save',{...section,id:String(contactSection.id),sort_order:'1'});
+ html=await page('/bio');ok(html.indexOf('&lt;Kontak&gt; '+marker)<html.indexOf('Lokasi '+marker));
+ await post('/admin/biolinks/save',{...secondButton,id:String(secondLink.id),section_id:String(locationSection.id)});
+ html=await page('/bio');ok(html.indexOf(secondButton.title)>html.indexOf('Lokasi '+marker));
+ await post('/admin/biosections/'+contactSection.id+'/delete',{_csrf:'bad'},403);
+ await post('/admin/biosections/'+contactSection.id+'/delete',{});
+ const [orphan]=await query('SELECT section_id FROM bio_links WHERE id=?',[first.id]);ok(orphan.section_id===null);
+ html=await page('/bio');ok(html.includes(button.title) && !html.includes('&lt;Kontak&gt; '+marker));
  await post('/admin/biolinks/save',{...button,id:String(first.id),is_active:''});ok(!(await page('/bio')).includes(button.title));
  await post('/admin/bio',{...profile,is_active:''});ok((await request('/bio')).status===404);
  await post('/admin/bio',{...profile,show_title:''});ok((await page('/bio')).includes('<h1 class="sr-only">'));
@@ -55,6 +88,7 @@ try {
 } finally {
  await new Promise(resolve=>server.close(resolve));
  for(const rowId of links) await query('DELETE FROM bio_links WHERE id=? AND title LIKE ?',[rowId,'%'+marker]);
+ for(const rowId of sections) await query('DELETE FROM bio_sections WHERE id=? AND title LIKE ?',[rowId,'%'+marker]);
  if(contactId) await query('DELETE FROM contacts WHERE id=? AND slug=?',[contactId,'bio-qa-'+marker]);
  await query('UPDATE bio_settings SET title=?,description=?,logo_path=?,primary_color=?,accent_color=?,show_title=?,is_active=?,updated_at=? WHERE id=1 AND title=?',[original.title,original.description,original.logo_path,original.primary_color,original.accent_color,original.show_title,original.is_active,original.updated_at,profile.title]);
  if(adminId) await query('DELETE FROM users WHERE id=? AND email=?',[adminId,email]);
