@@ -40,6 +40,17 @@ app.get('/theme.css', async (req,res)=> {
 });
 app.use(express.static(path.join(root,'public'), { maxAge:'1h',dotfiles:'deny',index:false }));
 async function settings() { const [s]=await query('SELECT * FROM site_settings WHERE id=1'); if(!s) throw new Error('Initialize database first.'); if(typeof s.opening_hours==='string') s.opening_hours=JSON.parse(s.opening_hours); return s; }
+async function bioSettings() { const [bio]=await query('SELECT * FROM bio_settings WHERE id=1'); if(!bio) throw new Error('Run database migration first.'); return bio; }
+app.get('/bio/theme.css',async(req,res)=> {
+ const bio=await bioSettings();
+ res.type('css').set('Cache-Control','no-cache').send(`:root{--primary:${bio.primary_color};--accent:${bio.accent_color};--primary-ink:${ink(bio.primary_color)};--accent-ink:${ink(bio.accent_color)}}`);
+});
+app.get('/bio',async(req,res)=> {
+ const bio=await bioSettings();
+ if(!bio.is_active) return res.status(404).render('error',{message:'Halaman Bio Instagram sedang nonaktif.'});
+ const links=await query('SELECT * FROM bio_links WHERE is_active=1 ORDER BY sort_order,id');
+ res.set('Cache-Control','no-store').render('bio-public',{bio,links,canonical:new URL('/bio',origin).href});
+});
 async function resolveContact(routeSlug) {
  const s=await settings(); let c;
  if (routeSlug === 'default') {
@@ -195,12 +206,13 @@ app.get('/admin/stats.csv',async(req,res)=> {
  }
  res.end();
 });
-const sections={settings:'Pengaturan lab',contacts:'Kontak marketing',branches:'Lokasi & cabang',buttons:'Tombol tambahan',shortlinks:'Shortlink',qr:'QR kartu nama',users:'Kelola admin',password:'Keamanan akun'};
+const sections={settings:'Pengaturan lab',contacts:'Kontak marketing',branches:'Lokasi & cabang',buttons:'Tombol tambahan',bio:'Bio Instagram',shortlinks:'Shortlink',qr:'QR kartu nama',users:'Kelola admin',password:'Keamanan akun'};
 app.get('/admin/:section',async(req,res)=> {
  const section=req.params.section;
  if(!sections[section]) return res.status(404).render('error',{message:'Halaman tidak ditemukan.'});
  const [s,contacts,branches,buttons,admins,shortlinks]=await Promise.all([settings(),query('SELECT c.*,b.name branch_name FROM contacts c LEFT JOIN branches b ON b.id=c.branch_id ORDER BY c.id'),query('SELECT * FROM branches ORDER BY id'),query('SELECT * FROM extra_buttons ORDER BY sort_order,id'),section==='users' ? query('SELECT id,name,email FROM users ORDER BY id'):[],section==='shortlinks' ? query('SELECT * FROM short_links ORDER BY id DESC'):[]]);
- res.render('admin',{section,title:sections[section],s,contacts,branches,buttons,admins,shortlinks,dayNames,origin:origin.origin,stats:null});
+ const [bio,bioLinks]=section==='bio' ? await Promise.all([bioSettings(),query('SELECT * FROM bio_links ORDER BY sort_order,id')]):[null,[]];
+ res.render('admin',{section,title:sections[section],s,contacts,branches,buttons,admins,shortlinks,bio,bioLinks,dayNames,origin:origin.origin,stats:null});
 });
 async function activeRelation(table,value) {
  const relationId=id(value,true);
@@ -216,7 +228,19 @@ app.post('/admin/settings',csrf,async(req,res)=> {
  await query('UPDATE site_settings SET lab_name=?,tagline=?,greeting=?,address=?,opening_hours=?,primary_color=?,accent_color=?,default_maps_url=?,default_wa_number=?,default_wa_message=?,default_contact_id=?,marketing_noindex=?,show_lab_name=? WHERE id=1',values);
  done(req,res,'/admin/settings');
 });
+app.post('/admin/bio',csrf,async(req,res)=> {
+ const b=req.body;
+ await query('UPDATE bio_settings SET title=?,description=?,primary_color=?,accent_color=?,show_title=?,is_active=? WHERE id=1',[
+  text(b.title,'Judul halaman',150),text(b.description,'Deskripsi',500,false),color(b.primary_color),color(b.accent_color),b.show_title==='1' ? 1:0,b.is_active==='1' ? 1:0
+ ]);
+ done(req,res,'/admin/bio','Pengaturan Bio Instagram berhasil disimpan.');
+});
 const models={
+ biolinks:{table:'bio_links',redirect:'/admin/bio',fields:['title','subtitle','url','icon','sort_order','is_active'],values:async b=> {
+  if(!['website','whatsapp','maps','instagram','catalog','phone'].includes(b.icon)) throw invalid('Jenis tombol tidak valid.');
+  const order=Number(b.sort_order);if(!Number.isInteger(order) || order<0 || order>999) throw invalid('Urutan harus 0–999.');
+  return [text(b.title,'Judul tombol',150),text(b.subtitle,'Keterangan tombol',200,false),safeURL(b.url,b.icon),b.icon,order,b.is_active==='1' ? 1:0];
+ }},
  contacts:{ fields:['slug','name','job_title','wa_number','wa_message','branch_id','is_active'],
   values:async b=>[slug(b.slug),text(b.name,'Nama',100),text(b.job_title,'Jabatan',100),normalizeWA(b.wa_number),text(b.wa_message,'Pesan',1000),await activeRelation('branches',b.branch_id),b.is_active ? 1:0] },
  branches:{ fields:['name','address','maps_url','is_active'], values:async b=>[text(b.name,'Nama cabang',150),text(b.address,'Alamat',500),safeURL(b.maps_url,'maps'),b.is_active ? 1:0] },
@@ -234,17 +258,20 @@ app.post('/admin/:model/save',csrf,async(req,res)=> {
   const result=await query(`UPDATE ${table} SET ${model.fields.map(f=>`${f}=?`).join(',')} WHERE id=?`,[...values,rowId]);
   if(!result.affectedRows) throw invalid('Data tidak ditemukan.');
  } else await query(`INSERT INTO ${table} (${model.fields.join(',')}) VALUES (${values.map(()=>'?').join(',')})`,values);
- done(req,res,`/admin/${req.params.model}`);
+ done(req,res,model.redirect || `/admin/${req.params.model}`);
 });
 async function removePhoto(photo) {
- if(/^\/uploads\/[a-f0-9-]+\.webp$/.test(photo || '')) await unlink(path.join(root,'public',photo)).catch(()=>{});
+ if(/^\/uploads\/[a-f0-9-]+\.webp$/.test(photo || '')) {
+  const refs=await query('SELECT id FROM contacts WHERE photo_path=? UNION ALL SELECT id FROM site_settings WHERE logo_path=? UNION ALL SELECT id FROM bio_settings WHERE logo_path=? LIMIT 1',[photo,photo,photo]);
+  if(!refs.length) await unlink(path.join(root,'public',photo)).catch(()=>{});
+ }
 }
 app.post('/admin/:model/:id/delete',csrf,async(req,res)=> {
  const model=models[req.params.model]; if(!model) throw invalid('Jenis data tidak valid.');
  const rowId=id(req.params.id),table=model.table || req.params.model;
  let old; if(req.params.model==='contacts') [old]=await query('SELECT photo_path FROM contacts WHERE id=?',[rowId]);
  await query(`DELETE FROM ${table} WHERE id=?`,[rowId]); await removePhoto(old?.photo_path);
- done(req,res,`/admin/${req.params.model}`,'Data berhasil dihapus.');
+ done(req,res,model.redirect || `/admin/${req.params.model}`,'Data berhasil dihapus.');
 });
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:2*1024*1024,files:1,fields:5},fileFilter:(req,file,cb)=> {
  cb(['image/jpeg','image/png','image/webp'].includes(file.mimetype) ? null:invalid('Gambar harus JPG, PNG, atau WebP.'),true);
@@ -252,8 +279,9 @@ const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:2*1024*1024
 app.post('/admin/upload',upload.single('image'),csrf,async(req,res)=> {
  if(!req.file) throw invalid('Pilih gambar maksimal 2 MB.');
  const contactId=req.body.target==='contact' ? id(req.body.contact_id):null;
- if(!contactId && req.body.target!=='logo') throw invalid('Tujuan upload tidak valid.');
- const [record]=contactId ? await query('SELECT photo_path FROM contacts WHERE id=?',[contactId]):[await settings()];
+ const bioTarget=req.body.target==='biologo';
+ if(!contactId && !['logo','biologo'].includes(req.body.target)) throw invalid('Tujuan upload tidak valid.');
+ const [record]=contactId ? await query('SELECT photo_path FROM contacts WHERE id=?',[contactId]):[bioTarget ? await bioSettings():await settings()];
  if(!record) throw invalid('Kontak tidak ditemukan.');
  const fileName=randomUUID()+'.webp',photo='/uploads/'+fileName;
  try {
@@ -262,19 +290,20 @@ app.post('/admin/upload',upload.single('image'),csrf,async(req,res)=> {
   await sharp(req.file.buffer,{limitInputPixels:16000000,animated:false}).rotate().resize(contactId ? 400:600,contactId ? 400:600,{fit:contactId ? 'cover':'inside',withoutEnlargement:true}).webp({quality:82}).toFile(path.join(root,'public','uploads',fileName));
  } catch { throw invalid('Isi gambar tidak valid atau dimensi terlalu besar.'); }
  try {
-  await query(contactId ? 'UPDATE contacts SET photo_path=? WHERE id=?':'UPDATE site_settings SET logo_path=? WHERE id=?',[photo,contactId || 1]);
+  await query(contactId ? 'UPDATE contacts SET photo_path=? WHERE id=?':bioTarget ? 'UPDATE bio_settings SET logo_path=? WHERE id=?':'UPDATE site_settings SET logo_path=? WHERE id=?',[photo,contactId || 1]);
  } catch(e) { await removePhoto(photo); throw e; }
  await removePhoto(contactId ? record.photo_path:record.logo_path);
- done(req,res,contactId ? '/admin/contacts':'/admin/settings','Gambar berhasil diunggah dan dikompres.');
+ done(req,res,contactId ? '/admin/contacts':bioTarget ? '/admin/bio':'/admin/settings','Gambar berhasil diunggah dan dikompres.');
 });
 app.post('/admin/image/remove',csrf,async(req,res)=> {
  const contactId=req.body.target==='contact' ? id(req.body.contact_id):null;
- if(!contactId && req.body.target!=='logo') throw invalid('Tujuan tidak valid.');
- const [record]=contactId ? await query('SELECT photo_path FROM contacts WHERE id=?',[contactId]):[await settings()];
+ const bioTarget=req.body.target==='biologo';
+ if(!contactId && !['logo','biologo'].includes(req.body.target)) throw invalid('Tujuan tidak valid.');
+ const [record]=contactId ? await query('SELECT photo_path FROM contacts WHERE id=?',[contactId]):[bioTarget ? await bioSettings():await settings()];
  if(!record) throw invalid('Data tidak ditemukan.');
- await query(contactId ? 'UPDATE contacts SET photo_path=NULL WHERE id=?':'UPDATE site_settings SET logo_path=NULL WHERE id=?',[contactId || 1]);
+ await query(contactId ? 'UPDATE contacts SET photo_path=NULL WHERE id=?':bioTarget ? 'UPDATE bio_settings SET logo_path=NULL WHERE id=?':'UPDATE site_settings SET logo_path=NULL WHERE id=?',[contactId || 1]);
  await removePhoto(contactId ? record.photo_path:record.logo_path);
- done(req,res,contactId ? '/admin/contacts':'/admin/settings');
+ done(req,res,contactId ? '/admin/contacts':bioTarget ? '/admin/bio':'/admin/settings');
 });
 app.post('/admin/shortlinks',csrf,async(req,res)=> {
  const b=req.body,title=text(b.title,'Nama link',150),url=safeURL(b.target_url),active=b.is_active==='1' ? 1:0;

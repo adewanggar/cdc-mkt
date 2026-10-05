@@ -22,3 +22,5 @@
 .lab-logo-mark{width:190px;max-width:70%;margin:0 auto 18px}.lab-logo-mark img{display:block;width:100%;height:auto;object-fit:contain;filter:brightness(0) invert(1)}.settings-form+.panel .upload-preview{background:var(--primary)}@media(max-width:480px){.lab-logo-mark{width:170px;margin-bottom:16px}}
 
 .shortlink-address{overflow-wrap:anywhere;font-size:13px;color:var(--primary);margin-bottom:12px}
+
+.bio-instagram .bio-content{padding-top:22px}.instagram-links{display:grid;gap:12px}.instagram-links .cta span:not(.cta-icon){min-width:0;overflow-wrap:anywhere}.instagram-links .cta:first-child{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.bio-instagram .tagline{white-space:pre-line}.instagram-empty{text-align:center;color:#718198;padding:20px 0}.bio-logo-panel .upload-preview{background:var(--primary)}

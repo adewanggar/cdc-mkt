@@ -69,3 +69,7 @@ Pilihan Tampilkan nama lab di bawah logo telah diuji melalui panel admin: simpan
 ## Shortlink Base62 dengan huruf besar/kecil
 
 Lima unit test dan 49 pemeriksaan integrasi shortlink lulus. Cakupan baru: kode otomatis delapan karakter A–Z/a–z/0–9; alias campuran; dua alias yang hanya berbeda besar/kecil tersimpan sebagai dua baris dan redirect ke dua tujuan berbeda; varian case yang tidak dibuat mengembalikan 404; duplikat dengan case sama tetap ditolak. Alias lama yang berisi huruf kecil, angka, dan tanda hubung tetap diuji berhasil. Migrasi idempotent dijalankan dua kali dan mempertahankan data pengguna.
+
+## Bio Instagram
+
+45 pemeriksaan integrasi berhasil: menu hanya dapat dikelola setelah login; CSRF dan validasi warna/URL/urutan; pengaturan tersimpan dan tampil dengan escaping; tema warna independen; tidak menampilkan kartu/tautan marketing; urutan tombol; aktif/nonaktif tombol; edit dan hapus; status halaman; tampil/sembunyi judul; upload logo WebP; penggantian logo bio tidak mengubah logo lab; file gambar yang masih dipakai kontak tetap tersedia sampai referensi terakhir dihapus. Pengaturan lab serta jumlah visits/clicks marketing tidak berubah selama tes. Tabel baru dimigrasikan dua kali tanpa kesalahan, dan profil bio dikembalikan setelah pengujian. Pemeriksaan visual otomatis browser belum tersedia karena alat browser gagal saat inisialisasi; halaman lokal disediakan untuk pratinjau langsung.

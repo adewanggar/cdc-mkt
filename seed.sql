@@ -17,3 +17,5 @@ INSERT INTO extra_buttons (id,title,url,icon,sort_order,is_active) VALUES
 
 -- Supplied Cahaya Diagnostic Centre logo, bundled in public/assets.
 UPDATE site_settings SET logo_path='/assets/cahaya-logo-white.svg' WHERE id=1;
+
+INSERT IGNORE INTO bio_settings (id,title,description,logo_path,primary_color,accent_color) SELECT 1,lab_name,'Informasi, layanan, dan kabar terbaru.',logo_path,primary_color,accent_color FROM site_settings WHERE id=1;

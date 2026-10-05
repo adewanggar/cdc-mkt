@@ -188,3 +188,13 @@ Instalasi baru menggunakan schema.sql. Untuk instalasi lama, backup lalu jalanka
 Pengujian shortlink pada database QA terpisah: `node --env-file=.env.test tests/shortlinks.integration.js`. Skrip memakai akun admin dari environment dan membersihkan hanya shortlink/sesi sementara yang dibuatnya.
 
 Pembaruan Base62: pada instalasi lama, jalankan `npm run db:migrate` sebelum restart. Migrasi mengubah kolom nama singkat menjadi peka huruf besar/kecil tanpa mengganti kode, tujuan, atau jumlah klik yang sudah tersimpan. Pengaturan slug kontak marketing tetap memakai huruf kecil.
+
+## Bio Instagram
+
+Menu **Bio Instagram** mengelola halaman publik `/bio`, contoh alamat final `https://mkt.cmhgroup.id/bio`. Judul, deskripsi, logo, warna, pilihan tampil judul, dan status halaman diatur sendiri. Admin dapat menambah, mengedit, mengurutkan, menyembunyikan, dan menghapus tombol. Ikon tersedia: Website, WhatsApp, Lokasi, Instagram, Katalog/layanan, Telepon. URL memakai HTTPS, atau `tel:+62...` untuk ikon Telepon. Link halaman dapat disalin dari menu ini untuk dimasukkan ke bio Instagram.
+
+Halaman memakai tabel `bio_settings` dan `bio_links`, tidak memakai kontak marketing atau tombol tambahan marketing. Link membuka tujuan langsung, sehingga kunjungan/klik Bio Instagram tidak masuk statistik marketing. Tombol tetap Customer Care tetap tersedia sesuai pengaturan aplikasi. Pada pembuatan pertama, identitas dasar/logo/warna disalin dari lab; setelah itu pengaturan Bio Instagram berdiri sendiri. Daftar tombol dimulai kosong agar admin mengisinya sendiri. Logo yang masih digunakan halaman lain tidak dihapus dari penyimpanan saat diganti.
+
+Instalasi baru memakai schema.sql dan seed.sql terbaru. Pembaruan instalasi lama: backup database/gambar, upload kode, jalankan `npm run db:migrate`, lalu restart aplikasi. Untuk Docker: `docker compose build app`, `docker compose run --rm app npm run db:migrate`, lalu `docker compose up -d app`. Migrasi membuat tabel baru tanpa menghapus data, dan dapat diulang.
+
+Tes khusus pada database QA terpisah: `node --env-file=.env.test tests/bio.integration.js`. Pengujian memakai akun/tombol/kontak sementara sendiri, mengembalikan pengaturan bio, dan mempertahankan pengaturan/statistik marketing.

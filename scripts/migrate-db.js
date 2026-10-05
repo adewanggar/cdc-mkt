@@ -7,5 +7,7 @@ try {
  await query(await readFile(new URL('../migrations/shortlinks.sql',import.meta.url),'utf8'));
  const [codeColumn]=await query("SELECT COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='short_links' AND COLUMN_NAME='slug'");
  if(codeColumn.COLLATION_NAME!=='ascii_bin') await query('ALTER TABLE short_links MODIFY slug VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL');
+ for(const file of ['bio-settings.sql','bio-links.sql']) await query(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+ await query("INSERT IGNORE INTO bio_settings (id,title,description,logo_path,primary_color,accent_color) SELECT 1,lab_name,'Informasi, layanan, dan kabar terbaru.',logo_path,primary_color,accent_color FROM site_settings WHERE id=1");
  console.log('Database updated; existing settings and contacts preserved.');
 } finally { await pool.end(); }
