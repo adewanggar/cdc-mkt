@@ -1,6 +1,6 @@
 # Lab Connect
 
-Landing page ringan untuk kartu nama marketing laboratorium. Node.js + Express 5, MySQL 8, HTML/EJS, Tailwind CSS yang dikompilasi lokal, dan JavaScript kecil khusus admin. Halaman publik berfungsi tanpa JavaScript dan tanpa CDN.
+Landing page ringan untuk kartu nama marketing laboratorium. Node.js + Express 5, MySQL 8, HTML/EJS, Tailwind CSS yang dikompilasi lokal, dan JavaScript kecil untuk admin serta popup lokasi. Tautan publik tetap berfungsi tanpa JavaScript dan tanpa CDN.
 
 ## Isi proyek
 
@@ -204,3 +204,11 @@ Tes khusus pada database QA terpisah: `node --env-file=.env.test tests/bio.integ
 Di menu Bio Instagram, buat section dengan judul sendiri (contoh: Kontak Cahaya Lab, Lokasi Cahaya Lab, Update & Info), tentukan urutan, lalu pilih section pada formulir setiap tombol. Judul kelompok tampil rata tengah dengan jarak antarsection. Urutan section dan urutan tombol dalam section diatur terpisah; angka kecil tampil lebih dulu. Tombol tanpa section tampil paling atas tanpa judul kelompok. Section kosong atau tanpa tombol aktif tidak ditampilkan.
 
 Menonaktifkan section menyembunyikan judul dan seluruh tombolnya tanpa mengubah status tombol. Menghapus section mempertahankan tombol dan memindahkannya ke Tanpa section. Section dimulai kosong untuk diisi admin. Tombol lama tetap tersimpan tanpa section. Pembaruan VPS membutuhkan `npm run db:migrate` sebelum restart; migrasi menambah tabel `bio_sections` dan kolom `bio_links.section_id` tanpa menghapus isi bio.
+
+## Pilihan lokasi beberapa cabang
+
+Tambahkan dua cabang melalui **Lokasi & cabang**, isi nama, alamat, link Google Maps, lalu aktifkan. Semua cabang aktif otomatis tampil di halaman depan, seluruh halaman marketing, dan Bio Instagram; tidak dibatasi dua bila kelak ada cabang tambahan. Bagian **Kunjungi kami** mencantumkan nama/alamat/Maps masing-masing. Tombol **Lihat Lokasi** membuka dialog pilihan cabang; dapat ditutup dengan ×, Escape, atau klik di luar popup. Dialog memakai elemen HTML native dan JavaScript lokal kecil, tanpa library baru. Jika JavaScript tidak tersedia, tautan menggulir ke daftar Kunjungi kami yang tetap dapat digunakan. Bila belum ada cabang aktif, lokasi default lab digunakan.
+
+Di Bio Instagram, tombol bawaan Lokasi tersedia otomatis. Untuk meletakkannya pada section sendiri, buat/edit tombol dan pilih **Tujuan tombol → Pilih cabang (popup lokasi)**. Mode ini memakai ikon Lokasi dan tidak membutuhkan URL. Tombol bawaan otomatis disembunyikan ketika ada tombol popup aktif, agar tidak muncul dua kali. Link Maps yang diisi sendiri tetap membuka URL tersebut langsung. Mode popup disimpan sebagai nilai internal `#locations` pada kolom URL yang ada.
+
+Klik Maps dari halaman depan/marketing melewati `/go/maps/:slug?branch=:id`, memvalidasi cabang aktif, dan tetap dicatat sebagai klik Maps milik marketing terkait. Link redirect lama tanpa parameter cabang tetap memakai lokasi default/cabang terkait marketing. Bio Instagram membuka Maps langsung tanpa statistik marketing. Pembaruan fitur lokasi ini tidak membutuhkan migrasi database tambahan; cukup unggah kode dan restart aplikasi. Tes khusus: `node --env-file=.env.test tests/locations.integration.js`; hanya data QA sendiri yang dibersihkan.

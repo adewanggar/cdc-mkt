@@ -5,7 +5,7 @@
 <% if(individual && s.marketing_noindex) { %><meta name="robots" content="noindex,nofollow"><% } %>
 <link rel="canonical" href="<%= canonical %>"><link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/fonts/jakarta-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/styles.css?v=contact-gap-1"><link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/styles.css?v=locations-1"><link rel="stylesheet" href="/theme.css"><script src="/locations.js?v=1" defer></script>
 </head><body class="public-body">
 <main class="bio-shell">
  <header class="bio-header">
@@ -21,14 +21,14 @@
   <div class="greeting"><% if(s.greeting) { %><h2><%= s.greeting %></h2><% } %><p>Kami siap membantu kebutuhan pemeriksaan Anda.</p></div>
   <div class="primary-actions">
    <a class="cta cta-wa" href="/go/wa/<%= routeSlug %>"><span class="cta-icon"><%- include('icon',{name:'whatsapp'}) %></span><span><strong>Chat via WhatsApp</strong><small>Tanya layanan & buat janji</small></span><%- include('icon',{name:'arrow',cls:'cta-arrow'}) %></a>
-   <a class="cta cta-maps" href="/go/maps/<%= routeSlug %>"><span class="cta-icon"><%- include('icon',{name:'maps'}) %></span><span><strong>Lihat Lokasi</strong><small>Buka di Google Maps</small></span><%- include('icon',{name:'arrow',cls:'cta-arrow'}) %></a>
+   <a class="cta cta-maps" href="#locations" data-location-picker aria-haspopup="dialog" aria-controls="location-dialog"><span class="cta-icon"><%- include('icon',{name:'maps'}) %></span><span><strong>Lihat Lokasi</strong><small>Pilih cabang & buka Google Maps</small></span><%- include('icon',{name:'arrow',cls:'cta-arrow'}) %></a>
   </div>
   <% if(buttons.length) { %><nav class="extra-links" aria-label="Tautan lainnya"><% buttons.forEach(b=>{ %><a href="/go/extra-<%= b.id %>/<%= routeSlug %>"><span><%- include('icon',{name:b.icon}) %></span><%= b.title %></a><% }); %></nav><% } %>
   <section class="lab-info" aria-label="Informasi lab">
-   <div class="info-row"><%- include('icon',{name:'maps'}) %><div><h3><%= branch ? branch.name : 'Kunjungi kami' %></h3><p><%= address %></p></div></div>
+   <div id="locations" class="visit-locations"><h2 class="visit-title">Kunjungi kami</h2><%- include('location-list',{locations}) %></div>
    <div class="info-rule"></div>
    <div class="info-row"><%- include('icon',{name:'clock'}) %><div class="hours-info"><h3>Jam operasional</h3><p><%= status.today %></p><details class="hours-details"><summary>Lihat jadwal lengkap</summary><dl><% [1,2,3,4,5,6,0].forEach(d=>{ %><div><dt><%= dayNames[d] %></dt><dd><%= s.opening_hours[d] ? s.opening_hours[d].open+'–'+s.opening_hours[d].close : 'Tutup' %></dd></div><% }); %></dl></details></div><span class="open-badge <%= status.open ? '' : 'closed' %>"><i></i><%= status.label %></span></div>
   </section>
   <footer class="bio-footer"><%- include('brand') %><span><%= s.lab_name %><br><small>Terhubung lebih mudah. Sehat lebih dekat.</small></span></footer>
  </div>
-</main><%- include('customer-care') %></body></html>
+</main><%- include('location-dialog',{locations}) %><%- include('customer-care') %></body></html>

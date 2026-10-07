@@ -41,6 +41,12 @@ app.get('/theme.css', async (req,res)=> {
 app.use(express.static(path.join(root,'public'), { maxAge:'1h',dotfiles:'deny',index:false }));
 async function settings() { const [s]=await query('SELECT * FROM site_settings WHERE id=1'); if(!s) throw new Error('Initialize database first.'); if(typeof s.opening_hours==='string') s.opening_hours=JSON.parse(s.opening_hours); return s; }
 async function bioSettings() { const [bio]=await query('SELECT * FROM bio_settings WHERE id=1'); if(!bio) throw new Error('Run database migration first.'); return bio; }
+async function publicLocations(fallback) {
+ const branches=await query('SELECT id,name,address,maps_url FROM branches WHERE is_active=1 ORDER BY id');
+ if(branches.length) return branches;
+ const s=fallback || await settings();
+ return [{id:null,name:s.lab_name,address:s.address,maps_url:s.default_maps_url}];
+}
 app.get('/bio/theme.css',async(req,res)=> {
  const bio=await bioSettings();
  res.type('css').set('Cache-Control','no-cache').send(`:root{--primary:${bio.primary_color};--accent:${bio.accent_color};--primary-ink:${ink(bio.primary_color)};--accent-ink:${ink(bio.accent_color)}}`);
@@ -48,12 +54,12 @@ app.get('/bio/theme.css',async(req,res)=> {
 app.get('/bio',async(req,res)=> {
  const bio=await bioSettings();
  if(!bio.is_active) return res.status(404).render('error',{message:'Halaman Bio Instagram sedang nonaktif.'});
- const [links,bioSections]=await Promise.all([
+ const [links,bioSections,locations]=await Promise.all([
   query('SELECT l.* FROM bio_links l LEFT JOIN bio_sections s ON s.id=l.section_id WHERE l.is_active=1 AND (l.section_id IS NULL OR s.is_active=1) ORDER BY l.sort_order,l.id'),
-  query('SELECT * FROM bio_sections WHERE is_active=1 ORDER BY sort_order,id')
+  query('SELECT * FROM bio_sections WHERE is_active=1 ORDER BY sort_order,id'),publicLocations()
  ]);
  const groups=[{id:null,title:''},...bioSections].map(section=>({...section,links:links.filter(link=>link.section_id===section.id)})).filter(section=>section.links.length);
- res.set('Cache-Control','no-store').render('bio-public',{bio,links,groups,canonical:new URL('/bio',origin).href});
+ res.set('Cache-Control','no-store').render('bio-public',{bio,links,groups,locations,canonical:new URL('/bio',origin).href});
 });
 async function resolveContact(routeSlug) {
  const s=await settings(); let c;
@@ -88,8 +94,9 @@ async function publicPage(req,res,routeSlug) {
    data.c?.id || null,device(req.get('user-agent')),referrer(req.get('referer')),ipHash(req.ip,process.env.IP_HASH_SECRET)
   ]); } catch(e) { console.error('Visit tracking unavailable:',e.code); }
  }
- const buttons=await query('SELECT * FROM extra_buttons WHERE is_active=1 ORDER BY sort_order,id');
- res.set('Cache-Control','no-store').render('public',{...data,buttons,routeSlug,dayNames,status:openingStatus(data.s.opening_hours),
+ const [buttons,locations]=await Promise.all([query('SELECT * FROM extra_buttons WHERE is_active=1 ORDER BY sort_order,id'),publicLocations(data.s)]);
+ const locationLinks=locations.map(location=>({...location,maps_url:`/go/maps/${routeSlug}${location.id ? '?branch='+location.id : ''}`}));
+ res.set('Cache-Control','no-store').render('public',{...data,buttons,locations:locationLinks,routeSlug,dayNames,status:openingStatus(data.s.opening_hours),
   canonical:new URL(routeSlug==='default' ? '/' : `/m/${routeSlug}`,origin).href,individual:routeSlug!=='default'});
 }
 app.get('/',(req,res)=>publicPage(req,res,'default'));
@@ -98,7 +105,16 @@ app.get('/go/:type/:slug',async(req,res)=> {
  const data=await resolveContact(req.params.slug); let destination,buttonType;
  if(req.params.type==='wa') { destination=`https://wa.me/${normalizeWA(data.wa)}?text=${encodeURIComponent(data.message)}`; buttonType='whatsapp'; }
  else if(req.params.type==='care') { destination=`https://wa.me/628113052999?text=${encodeURIComponent('Halo Customer Care, saya ingin bertanya tentang layanan laboratorium.')}`; buttonType='whatsapp'; }
- else if(req.params.type==='maps') { destination=safeURL(data.maps,'maps'); buttonType='maps'; }
+ else if(req.params.type==='maps') {
+  let maps=data.maps;
+  if(req.query.branch!==undefined) {
+   const branchId=id(req.query.branch);
+   const [selected]=await query('SELECT maps_url FROM branches WHERE id=? AND is_active=1',[branchId]);
+   if(!selected) throw Object.assign(new Error('Cabang tidak tersedia.'),{status:404});
+   maps=selected.maps_url;
+  }
+  destination=safeURL(maps,'maps'); buttonType='maps';
+ }
  else if(/^extra-\d+$/.test(req.params.type)) {
   const [button]=await query('SELECT * FROM extra_buttons WHERE id=? AND is_active=1',[id(req.params.type.slice(6))]);
   if(!button) throw Object.assign(new Error('Tombol tidak tersedia.'),{status:404});
@@ -249,7 +265,8 @@ const models={
   const order=Number(b.sort_order);if(!Number.isInteger(order) || order<0 || order>999) throw invalid('Urutan harus 0–999.');
   const sectionId=id(b.section_id,true);
   if(sectionId && !(await query('SELECT id FROM bio_sections WHERE id=?',[sectionId])).length) throw invalid('Section tidak ditemukan.');
-  return [text(b.title,'Judul tombol',150),text(b.subtitle,'Keterangan tombol',200,false),safeURL(b.url,b.icon),b.icon,order,b.is_active==='1' ? 1:0,sectionId];
+  const picker=b.use_branches==='1';
+  return [text(b.title,'Judul tombol',150),text(b.subtitle,'Keterangan tombol',200,false),picker ? '#locations':safeURL(b.url,b.icon),picker ? 'maps':b.icon,order,b.is_active==='1' ? 1:0,sectionId];
  }},
  contacts:{ fields:['slug','name','job_title','wa_number','wa_message','branch_id','is_active'],
   values:async b=>[slug(b.slug),text(b.name,'Nama',100),text(b.job_title,'Jabatan',100),normalizeWA(b.wa_number),text(b.wa_message,'Pesan',1000),await activeRelation('branches',b.branch_id),b.is_active ? 1:0] },

@@ -7,6 +7,15 @@ document.querySelectorAll('[data-copy]').forEach(button=>button.addEventListener
  catch { window.prompt('Salin link halaman:',button.dataset.copy); }
 }));
 document.getElementById('back-button')?.addEventListener('click',()=>history.back());
+document.querySelectorAll('[data-branch-mode]').forEach(select=>{
+ const form=select.closest('form'),url=form.querySelector('[name="url"]'),icon=form.querySelector('[name="icon"]');
+ const update=()=>{
+  const picker=select.value==='1';
+  url.disabled=picker;url.required=!picker;
+  if(picker) icon.value='maps';
+ };
+ select.addEventListener('change',update);update();
+});
 document.querySelectorAll('.wa-message-editor').forEach(editor=>{
  const select=editor.querySelector('.wa-template-select'),textarea=editor.querySelector('textarea'),form=editor.closest('form');
  const nameInput=form.querySelector('[name="name"]'),labInput=form.querySelector('[name="lab_name"]');
